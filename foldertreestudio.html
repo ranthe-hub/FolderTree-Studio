@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FolderTree Studio</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent-color: #38bdf8;
+            --accent-hover: #0284c7;
+            --text-color: #f8fafc;
+            --muted-color: #94a3b8;
+            --border-color: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem;
+        }
+
+        header {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.25rem;
+            margin-bottom: 0.5rem;
+            color: var(--accent-color);
+        }
+
+        p.subtitle {
+            color: var(--muted-color);
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* Drop Zone Setup */
+        .drop-zone {
+            background-color: var(--card-bg);
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--accent-color);
+            background-color: #1e293b90;
+        }
+
+        .drop-zone input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .drop-zone-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        /* Controls Section */
+        .controls {
+            background-color: var(--card-bg);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid var(--border-color);
+        }
+
+        .option-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .option-group label {
+            cursor: pointer;
+            user-select: none;
+            color: var(--muted-color);
+            font-size: 0.95rem;
+        }
+
+        .option-group input[type="checkbox"] {
+            accent-color: var(--accent-color);
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        /* Output Section */
+        .output-container {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .output-header {
+            background-color: #0f172a80;
+            padding: 0.75rem 1.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .output-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--muted-color);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .btn {
+            background-color: var(--accent-color);
+            color: #0f172a;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        pre {
+            padding: 1.25rem;
+            font-family: "Fira Code", "Cascadia Code", Consolas, "Courier New", monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            white-space: pre;
+            overflow-x: auto;
+            color: #e2e8f0;
+            min-height: 200px;
+            max-height: 500px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>FolderTree Studio</h1>
+        <p class="subtitle">Upload or drop a directory to generate an instant text-based tree view</p>
+    </header>
+
+    <div class="container">
+        <!-- Upload Box -->
+        <div class="drop-zone" id="dropZone">
+            <span class="drop-zone-icon">📁</span>
+            <p><strong>Click to choose a folder</strong> or drag & drop it here</p>
+            <input type="file" id="folderInput" webkitdirectory directory multiple>
+        </div>
+
+        <!-- Filter Options -->
+        <div class="controls">
+            <div class="option-group">
+                <input type="checkbox" id="ignoreHidden" checked>
+                <label for="ignoreHidden">Ignore hidden files/folders (e.g. <code>.git</code>)</label>
+            </div>
+            <div class="option-group">
+                <input type="checkbox" id="ignoreNodeModules" checked>
+                <label for="ignoreNodeModules">Ignore <code>node_modules</code></label>
+            </div>
+        </div>
+
+        <!-- Output Display -->
+        <div class="output-container">
+            <div class="output-header">
+                <span class="output-title">Generated FolderTree</span>
+                <button class="btn" id="copyBtn">Copy Text</button>
+            </div>
+            <pre id="treeOutput">Select or drop a folder above to see the output here...</pre>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const folderInput = document.getElementById('folderInput');
+        const treeOutput = document.getElementById('treeOutput');
+        const copyBtn = document.getElementById('copyBtn');
+        const ignoreHiddenCheckbox = document.getElementById('ignoreHidden');
+        const ignoreNodeModulesCheckbox = document.getElementById('ignoreNodeModules');
+
+        let rawFiles = [];
+        let rootFolderName = "";
+
+        // Handle native input selection
+        folderInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                rawFiles = Array.from(e.target.files);
+                // First segment of path is the root folder name
+                rootFolderName = rawFiles[0].webkitRelativePath.split('/')[0];
+                generateTree();
+            }
+        });
+
+        // Re-generate if settings change
+        ignoreHiddenCheckbox.addEventListener('change', generateTree);
+        ignoreNodeModulesCheckbox.addEventListener('change', generateTree);
+
+        // Drag & Drop event handling
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.add('dragover');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.remove('dragover');
+            }, false);
+        });
+
+        dropZone.addEventListener('drop', async (e) => {
+            const items = e.dataTransfer.items;
+            if (!items) return;
+
+            // Use WebKit GetAsEntry API for directory parsing from drag-and-drop
+            const entries = [];
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                if (item.kind === 'file') {
+                    const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+                    if (entry) entries.push(entry);
+                }
+            }
+
+            if (entries.length > 0) {
+                // Parse dropped items recursively
+                const fileList = [];
+                for (const entry of entries) {
+                    if (entry.isDirectory) {
+                        rootFolderName = entry.name;
+                        await readDirectoryRecursively(entry, '', fileList);
+                    }
+                }
+                rawFiles = fileList;
+                generateTree();
+            }
+        });
+
+        // Recursive reader for WebKit entries
+        async function readDirectoryRecursively(entry, path, fileList) {
+            if (entry.isFile) {
+                fileList.push({ relativePath: path + entry.name });
+            } else if (entry.isDirectory) {
+                const dirReader = entry.createReader();
+                const entries = await new Promise((resolve) => {
+                    dirReader.readEntries(resolve);
+                });
+                for (const childEntry of entries) {
+                    await readDirectoryRecursively(childEntry, path + entry.name + '/', fileList);
+                }
+            }
+        }
+
+        // Tree structure builder
+        function generateTree() {
+            if (rawFiles.length === 0) return;
+
+            const ignoreHidden = ignoreHiddenCheckbox.checked;
+            const ignoreNodeModules = ignoreNodeModulesCheckbox.checked;
+
+            // Build hierarchical tree object
+            const tree = {};
+
+            rawFiles.forEach(file => {
+                const pathParts = (file.webkitRelativePath || file.relativePath).split('/');
+                
+                // Remove root folder from parts
+                if (file.webkitRelativePath) {
+                    pathParts.shift();
+                }
+
+                // Filter logic
+                let current = tree;
+                for (let i = 0; i < pathParts.length; i++) {
+                    const part = pathParts[i];
+
+                    if (ignoreHidden && part.startsWith('.')) return;
+                    if (ignoreNodeModules && part === 'node_modules') return;
+
+                    if (!current[part]) {
+                        // Leaf node is null, directories are objects
+                        current[part] = (i === pathParts.length - 1) ? null : {};
+                    }
+                    current = current[part];
+                }
+            });
+
+            // Convert tree object to ASCII text
+            const asciiString = rootFolderName + '/\n' + renderTree(tree, '');
+            treeOutput.textContent = asciiString;
+        }
+
+        // ASCII Recursive Renderer
+        function renderTree(node, prefix = '') {
+            let result = '';
+            const keys = Object.keys(node || {});
+
+            // Sort directories first, then files alphabetically
+            keys.sort((a, b) => {
+                const aIsDir = node[a] !== null;
+                const bIsDir = node[b] !== null;
+                if (aIsDir && !bIsDir) return -1;
+                if (!aIsDir && bIsDir) return 1;
+                return a.localeCompare(b);
+            });
+
+            keys.forEach((key, index) => {
+                const isLast = index === keys.length - 1;
+                const connector = isLast ? '└── ' : '├── ';
+                const childPrefix = isLast ? '    ' : '│   ';
+                const isDirectory = node[key] !== null;
+
+                result += prefix + connector + key + (isDirectory ? '/' : '') + '\n';
+
+                if (isDirectory) {
+                    result += renderTree(node[key], prefix + childPrefix);
+                }
+            });
+
+            return result;
+        }
+
+        // Copy functionality
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(treeOutput.textContent).then(() => {
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = 'Copied!';
+                setTimeout(() => copyBtn.textContent = originalText, 1800);
+            });
+        });
+    </script>
+</body>
+</html>
